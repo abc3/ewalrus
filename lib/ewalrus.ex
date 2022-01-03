@@ -12,7 +12,7 @@ defmodule Ewalrus do
       :world
 
   """
-  def hello do
+  def start_link() do
     :world
   end
 end
