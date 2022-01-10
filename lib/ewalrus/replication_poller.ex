@@ -13,14 +13,11 @@ defmodule Ewalrus.ReplicationPoller do
   }
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    GenServer.start_link(__MODULE__, opts)
   end
 
   @impl true
   def init(opts) do
-    {:ok, pid} =
-      Postgrex.start_link(database: "postgres", password: "postgres", username: "postgres")
-
     state = %{
       backoff:
         Backoff.new(
@@ -33,7 +30,7 @@ defmodule Ewalrus.ReplicationPoller do
       publication: Keyword.fetch!(opts, :publication),
       slot_name: Keyword.fetch!(opts, :slot_name),
       max_record_bytes: Keyword.fetch!(opts, :max_record_bytes),
-      conn: pid
+      conn: Keyword.fetch!(opts, :conn)
     }
 
     {:ok, state, {:continue, :prepare_replication}}

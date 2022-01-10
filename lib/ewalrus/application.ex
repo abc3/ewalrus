@@ -8,16 +8,7 @@ defmodule Ewalrus.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {
-        Ewalrus.ReplicationPoller,
-        backoff_type: :rand_exp,
-        backoff_min: 100,
-        backoff_max: 120_000,
-        replication_poll_interval: 1000,
-        publication: "supabase_realtime",
-        slot_name: "qwe1",
-        max_record_bytes: 1_048_576
-      }
+      {DynamicSupervisor, strategy: :one_for_one, name: Ewalrus.DynamicSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
