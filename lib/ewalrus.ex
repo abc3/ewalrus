@@ -41,4 +41,29 @@ defmodule Ewalrus do
     GenServer.stop(poll_pid)
     GenServer.stop(conn_pid)
   end
+
+  def create_topic_subscriber(conn) do
+    params = dummy_params()
+    Ewalrus.Subscriptions.create_topic_subscriber(conn, params)
+  end
+
+  def delete_subscriber(conn, id) do
+    Ewalrus.Subscriptions.delete_topic_subscriber(conn, id)
+  end
+
+  def dummy_params() do
+    %{
+      claims: %{
+        "aud" => "authenticated",
+        "email" => "jwt@test.com",
+        "exp" => 1_663_819_211,
+        "iat" => 1_632_283_191,
+        "iss" => "supabase",
+        "role" => "authenticated",
+        "sub" => "bbb51e4e-f371-4463-bf0a-af8f56dc9a73"
+      },
+      id: UUID.uuid1(),
+      topic: "public"
+    }
+  end
 end
