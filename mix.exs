@@ -24,7 +24,7 @@ defmodule Ewalrus.MixProject do
     [
       {:jason, "~> 1.2"},
       {:postgrex, "~> 0.15"},
-      {:ecto_sql, "~> 3.4"},
+      {:uuid, "~> 1.1"},
       {:benchee, "~> 0.11.0", only: :bench},
       {:benchee_json, "~> 0.4.0", only: :bench}
     ]
