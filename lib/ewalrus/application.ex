@@ -7,8 +7,12 @@ defmodule Ewalrus.Application do
 
   @impl true
   def start(_type, _args) do
+    Registry.start_link(keys: :unique, name: Ewalrus.Registry.DbInstances)
+    Registry.start_link(keys: :duplicate, name: Ewalrus.Registry.Subscribers)
+    Registry.start_link(keys: :unique, name: Ewalrus.Registry.SubscriptionManagers)
+
     children = [
-      {DynamicSupervisor, strategy: :one_for_one, name: Ewalrus.DynamicSupervisor}
+      {DynamicSupervisor, strategy: :one_for_one, name: Ewalrus.RlsSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

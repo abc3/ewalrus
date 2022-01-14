@@ -1,4 +1,11 @@
 defmodule Ewalrus do
+  require Logger
+
+  alias Ewalrus.Registry.DbInstances
+  alias Ewalrus.Registry.SubscriptionManagers
+  alias Ewalrus.Registry.Subscribers
+  alias Ewalrus.SubscriptionManager
+
   @moduledoc """
   Documentation for `Ewalrus`.
   """
@@ -6,49 +13,76 @@ defmodule Ewalrus do
   @doc """
   Start db poller.
 
-  ## Examples
-
-      iex> Ewalrus.start_link()
-      {:ok, pid}
-
   """
-  def start_link() do
-    {:ok, conn_pid} =
-      Postgrex.start_link(database: "postgres", password: "postgres", username: "postgres")
+  @spec start(String.t(), String.t(), String.t(), String.t(), String.t()) ::
+          :ok | {:error, :already_started}
+  def start(id, host, name, user, pass) do
+    case Registry.lookup(DbInstances, id) do
+      [] ->
+        opts = [id: id, db_host: host, db_name: name, db_user: user, db_pass: pass]
 
-    opts = [
-      conn: conn_pid,
-      backoff_type: :rand_exp,
-      backoff_min: 100,
-      backoff_max: 120_000,
-      replication_poll_interval: 1000,
-      publication: "supabase_realtime",
-      slot_name: "supabase_realtime_replication_slot",
-      max_record_bytes: 1_048_576
-    ]
+        DynamicSupervisor.start_child(Ewalrus.RlsSupervisor, %{
+          id: id,
+          start: {Ewalrus.DbSupervisor, :start_link, [opts]},
+          restart: :transient
+        })
 
-    {:ok, poll_pid} =
-      DynamicSupervisor.start_child(Ewalrus.DynamicSupervisor, %{
-        id: Ewalrus.ReplicationPoller,
-        start: {Ewalrus.ReplicationPoller, :start_link, [opts]},
-        restart: :transient
-      })
-
-    {:ok, conn_pid, poll_pid}
+      _ ->
+        {:error, :already_started}
+    end
   end
 
-  def stop(conn_pid, poll_pid) do
-    GenServer.stop(poll_pid)
-    GenServer.stop(conn_pid)
+  def subscribe(name, subs_id, topic, claims) do
+    pid = manager_pid(name)
+
+    if pid do
+      opts = %{
+        topic: topic,
+        id: subs_id,
+        claims: claims
+      }
+
+      Registry.register(Subscribers, name, subs_id)
+      SubscriptionManager.subscribe(pid, opts)
+    end
   end
 
-  def create_topic_subscriber(conn) do
-    params = dummy_params()
-    Ewalrus.Subscriptions.create_topic_subscriber(conn, params)
+  def unsubscribe(name, subs_id) do
+    pid = manager_pid(name)
+    me = self()
+
+    if pid do
+      SubscriptionManager.unsubscribe(pid, subs_id)
+
+      case Registry.lookup(Subscribers, name) do
+        [{^me, ^subs_id}] ->
+          stop(name)
+
+        _ ->
+          :ok
+      end
+    end
   end
 
-  def delete_subscriber(conn, id) do
-    Ewalrus.Subscriptions.delete_topic_subscriber(conn, id)
+  def stop(id) do
+    case Registry.lookup(DbInstances, id) do
+      [{pid, _}] ->
+        Supervisor.stop(pid, :normal)
+
+      _ ->
+        :ok
+    end
+  end
+
+  @spec manager_pid(any()) :: pid() | nil
+  defp manager_pid(id) do
+    case Registry.lookup(SubscriptionManagers, id) do
+      [{pid, _}] ->
+        pid
+
+      _ ->
+        nil
+    end
   end
 
   def dummy_params() do
