@@ -4,16 +4,16 @@ defmodule Ewalrus.Subscriptions do
 
   @type conn() :: DBConnection.conn()
 
-  @spec create_topic_subscriber(conn(), map()) :: :ok
-  def create_topic_subscriber(conn, params) do
+  @spec create(conn(), map()) :: :ok
+  def create(conn, params) do
     database_roles = fetch_database_roles(conn)
     oids = fetch_publication_tables(conn)
     new_params = enrich_subscription_params(params, database_roles, oids)
     insert_topic_subscriptions(conn, new_params)
   end
 
-  @spec delete_topic_subscriber(conn(), String.t()) :: any()
-  def delete_topic_subscriber(conn, id) do
+  @spec delete(conn(), String.t()) :: any()
+  def delete(conn, id) do
     sql = "delete from realtime.subscription where subscription_id = $1"
     bin_uuid = UUID.string_to_binary!(id)
     query(conn, sql, [bin_uuid])
