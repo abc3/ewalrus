@@ -1,9 +1,6 @@
 defmodule Ewalrus do
   require Logger
 
-  alias Ewalrus.Registry.DbInstances
-  alias Ewalrus.Registry.SubscriptionManagers
-  alias Ewalrus.Registry.Subscribers
   alias Ewalrus.SubscriptionManager
 
   @moduledoc """
@@ -16,13 +13,13 @@ defmodule Ewalrus do
   """
   @spec start(String.t(), String.t(), String.t(), String.t(), String.t()) ::
           :ok | {:error, :already_started}
-  def start(id, host, name, user, pass) do
-    case Registry.lookup(DbInstances, id) do
-      [] ->
-        opts = [id: id, db_host: host, db_name: name, db_user: user, db_pass: pass]
+  def start(scope, host, db_name, db_user, db_pass) do
+    case :global.whereis_name({:db_instance, scope}) do
+      :undefined ->
+        opts = [id: scope, db_host: host, db_name: db_name, db_user: db_user, db_pass: db_pass]
 
         DynamicSupervisor.start_child(Ewalrus.RlsSupervisor, %{
-          id: id,
+          id: scope,
           start: {Ewalrus.DbSupervisor, :start_link, [opts]},
           restart: :transient
         })
@@ -32,8 +29,8 @@ defmodule Ewalrus do
     end
   end
 
-  def subscribe(name, subs_id, topic, claims) do
-    pid = manager_pid(name)
+  def subscribe(scope, subs_id, topic, claims) do
+    pid = manager_pid(scope)
 
     if pid do
       opts = %{
@@ -44,21 +41,23 @@ defmodule Ewalrus do
 
       # TODO: move inside to SubscriptionManager
       bin_subs_id = UUID.string_to_binary!(subs_id)
-      Registry.register(Subscribers, name, bin_subs_id)
+      :syn.join(Ewalrus.Subscribers, scope, self(), bin_subs_id)
       SubscriptionManager.subscribe(pid, opts)
     end
   end
 
-  def unsubscribe(name, subs_id) do
-    pid = manager_pid(name)
+  def unsubscribe(scope, subs_id) do
+    pid = manager_pid(scope)
     me = self()
 
     if pid do
       SubscriptionManager.unsubscribe(pid, subs_id)
 
-      case Registry.lookup(Subscribers, name) do
-        [{^me, ^subs_id}] ->
-          stop(name)
+      bin_subs_id = UUID.string_to_binary!(subs_id)
+
+      case :syn.members(Ewalrus.Subscribers, scope) do
+        [{^me, ^bin_subs_id}] ->
+          stop(scope)
 
         _ ->
           :ok
@@ -66,24 +65,24 @@ defmodule Ewalrus do
     end
   end
 
-  def stop(id) do
-    case Registry.lookup(DbInstances, id) do
-      [{pid, _}] ->
-        Supervisor.stop(pid, :normal)
+  def stop(scope) do
+    case :global.whereis_name({:db_instance, scope}) do
+      :undefined ->
+        nil
 
-      _ ->
-        :ok
+      pid ->
+        Supervisor.stop(pid, :normal)
     end
   end
 
   @spec manager_pid(any()) :: pid() | nil
-  defp manager_pid(id) do
-    case Registry.lookup(SubscriptionManagers, id) do
-      [{pid, _}] ->
-        pid
-
-      _ ->
+  defp manager_pid(scope) do
+    case :global.whereis_name({:subscription_manager, scope}) do
+      :undefined ->
         nil
+
+      pid ->
+        pid
     end
   end
 

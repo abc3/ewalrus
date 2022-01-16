@@ -16,11 +16,7 @@ defmodule Ewalrus.DbSupervisor do
         username: args[:db_user]
       )
 
-    Registry.register(
-      Ewalrus.Registry.DbInstances,
-      args[:id],
-      {conn, System.system_time(:second)}
-    )
+    :global.register_name({:db_instance, args[:id]}, conn)
 
     opts = [
       id: args[:id],

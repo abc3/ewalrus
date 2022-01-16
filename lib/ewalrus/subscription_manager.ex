@@ -8,7 +8,8 @@ defmodule Ewalrus.SubscriptionManager do
 
   @impl true
   def init(opts) do
-    Registry.register(Ewalrus.Registry.SubscriptionManagers, opts.id, nil)
+    :global.register_name({:subscription_manager, opts.id}, self())
+    # :syn.register(Ewalrus.Managers, opts.id, self())
     {:ok, %{conn: opts.conn, id: opts.id}}
   end
 

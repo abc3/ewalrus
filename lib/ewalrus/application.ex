@@ -7,9 +7,7 @@ defmodule Ewalrus.Application do
 
   @impl true
   def start(_type, _args) do
-    Registry.start_link(keys: :unique, name: Ewalrus.Registry.DbInstances)
-    Registry.start_link(keys: :duplicate, name: Ewalrus.Registry.Subscribers)
-    Registry.start_link(keys: :unique, name: Ewalrus.Registry.SubscriptionManagers)
+    :syn.add_node_to_scopes([Ewalrus.Subscribers])
 
     children = [
       {DynamicSupervisor, strategy: :one_for_one, name: Ewalrus.RlsSupervisor}

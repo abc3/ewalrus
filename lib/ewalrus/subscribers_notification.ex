@@ -20,38 +20,22 @@ defmodule Ewalrus.SubscribersNotification do
   #   :ok
   # end
 
-  def broadcast_change(topic, %{type: event, subscription_ids: subs_id} = change, id) do
-    IO.inspect({:change, change})
-
+  def broadcast_change(_topic, %{subscription_ids: subs_id} = change, scope) do
     payload =
       Map.filter(change, fn {key, _} ->
         !Enum.member?([:is_rls_enabled, :subscription_ids], key)
       end)
 
-    msg = %{
-      topic: topic,
-      event: event,
-      payload: payload
-    }
-
-    Registry.lookup(Ewalrus.Registry.Subscribers, id)
+    :syn.members(Ewalrus.Subscribers, scope)
     |> Enum.each(fn {pid, bin_id} ->
       if MapSet.member?(subs_id, bin_id) do
         Logger.debug(
-          "Sent event, #{inspect([pid: pid, id: UUID.binary_to_string!(bin_id), msd: msg], pretty: true)}"
+          "Sent event, #{inspect([pid: pid, id: UUID.binary_to_string!(bin_id), msd: change], pretty: true)}"
         )
 
         send(pid, {:event, payload})
       end
     end)
-
-    # broadcast = %Broadcast{
-    #   topic: topic,
-    #   event: event,
-    #   payload: change
-    # }
-
-    # Phoenix.PubSub.broadcast_from(PubSub, self(), topic, broadcast, MessageDispatcher)
   end
 
   def notify_subscribers([_ | _] = changes, id) do
