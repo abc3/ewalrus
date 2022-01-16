@@ -42,7 +42,9 @@ defmodule Ewalrus do
         claims: claims
       }
 
-      Registry.register(Subscribers, name, subs_id)
+      # TODO: move inside to SubscriptionManager
+      bin_subs_id = UUID.string_to_binary!(subs_id)
+      Registry.register(Subscribers, name, bin_subs_id)
       SubscriptionManager.subscribe(pid, opts)
     end
   end

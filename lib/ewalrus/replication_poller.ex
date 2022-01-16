@@ -30,7 +30,8 @@ defmodule Ewalrus.ReplicationPoller do
       publication: Keyword.fetch!(opts, :publication),
       slot_name: Keyword.fetch!(opts, :slot_name),
       max_record_bytes: Keyword.fetch!(opts, :max_record_bytes),
-      conn: Keyword.fetch!(opts, :conn)
+      conn: Keyword.fetch!(opts, :conn),
+      id: Keyword.fetch!(opts, :id)
     }
 
     {:ok, state, {:continue, :prepare_replication}}
@@ -74,15 +75,14 @@ defmodule Ewalrus.ReplicationPoller do
           publication: publication,
           slot_name: slot_name,
           max_record_bytes: max_record_bytes,
-          conn: conn
+          conn: conn,
+          id: id
         } = state
       ) do
     Process.cancel_timer(poll_ref)
 
     try do
-      t = Replications.list_changes(conn, slot_name, publication, max_record_bytes)
-      IO.inspect({:erlang.time(), t})
-      t
+      Replications.list_changes(conn, slot_name, publication, max_record_bytes)
     catch
       :error, reason ->
         {:error, reason}
@@ -105,8 +105,9 @@ defmodule Ewalrus.ReplicationPoller do
               [record_struct | acc]
           end
         end)
-        |> inspect(pretty: true)
-        |> Logger.debug()
+        # |> Logger.debug()
+        |> Enum.reverse()
+        |> Ewalrus.SubscribersNotification.notify_subscribers(id)
 
       {:ok, _} ->
         :ok
