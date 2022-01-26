@@ -14,15 +14,18 @@ defmodule Ewalrus do
   @spec start(String.t(), String.t(), String.t(), String.t(), String.t()) ::
           :ok | {:error, :already_started}
   def start(scope, host, db_name, db_user, db_pass) do
-    case :global.whereis_name({:db_instance, scope}) do
+    case :global.whereis_name({:supervisor, scope}) do
       :undefined ->
         opts = [id: scope, db_host: host, db_name: db_name, db_user: db_user, db_pass: db_pass]
 
-        DynamicSupervisor.start_child(Ewalrus.RlsSupervisor, %{
-          id: scope,
-          start: {Ewalrus.DbSupervisor, :start_link, [opts]},
-          restart: :transient
-        })
+        {:ok, pid} =
+          DynamicSupervisor.start_child(Ewalrus.RlsSupervisor, %{
+            id: scope,
+            start: {Ewalrus.DbSupervisor, :start_link, [opts]},
+            restart: :transient
+          })
+
+        :global.register_name({:supervisor, scope}, pid)
 
       _ ->
         {:error, :already_started}
@@ -66,11 +69,14 @@ defmodule Ewalrus do
   end
 
   def stop(scope) do
-    case :global.whereis_name({:db_instance, scope}) do
+    case :global.whereis_name({:supervisor, scope}) do
       :undefined ->
         nil
 
       pid ->
+        :global.whereis_name({:db_instance, scope})
+        |> GenServer.stop(:normal)
+
         Supervisor.stop(pid, :normal)
     end
   end

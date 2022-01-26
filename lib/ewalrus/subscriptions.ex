@@ -48,7 +48,7 @@ defmodule Ewalrus.Subscriptions do
     schemaname, tablename, format('%I.%I', schemaname, tablename)::regclass as oid
     from pg_publication_tables where pubname = $1"
 
-    case query(conn, sql, ["supabase_realtime"]) do
+    case query(conn, sql, ["supabase_multiplayer"]) do
       {:ok, %{columns: ["schemaname", "tablename", "oid"], rows: rows}} ->
         Enum.reduce(rows, %{}, fn [schema, table, oid], acc ->
           Map.put(acc, {schema, table}, [oid])
