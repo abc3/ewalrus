@@ -25,8 +25,8 @@ defmodule Ewalrus.DbSupervisor do
       backoff_min: 100,
       backoff_max: 120_000,
       replication_poll_interval: 1000,
-      publication: "supabase_multiplayer",
-      slot_name: "supabase_multiplayer_replication_slot",
+      publication: args[:publication],
+      slot_name: args[:slot_name],
       max_record_bytes: 1_048_576
     ]
 

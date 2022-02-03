@@ -11,12 +11,28 @@ defmodule Ewalrus do
   Start db poller.
 
   """
-  @spec start(String.t(), String.t(), String.t(), String.t(), String.t()) ::
+  @spec start(String.t(), String.t(), String.t(), String.t(), String.t(), String.t(), String.t()) ::
           :ok | {:error, :already_started}
-  def start(scope, host, db_name, db_user, db_pass) do
+  def start(
+        scope,
+        host,
+        db_name,
+        db_user,
+        db_pass,
+        publication \\ "supabase_multiplayer",
+        slot_name \\ "supabase_multiplayer_replication_slot"
+      ) do
     case :global.whereis_name({:supervisor, scope}) do
       :undefined ->
-        opts = [id: scope, db_host: host, db_name: db_name, db_user: db_user, db_pass: db_pass]
+        opts = [
+          id: scope,
+          db_host: host,
+          db_name: db_name,
+          db_user: db_user,
+          db_pass: db_pass,
+          publication: publication,
+          slot_name: slot_name
+        ]
 
         {:ok, pid} =
           DynamicSupervisor.start_child(Ewalrus.RlsSupervisor, %{
