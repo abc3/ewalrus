@@ -24,7 +24,7 @@ defmodule Ewalrus.DbSupervisor do
       backoff_type: :rand_exp,
       backoff_min: 100,
       backoff_max: 120_000,
-      replication_poll_interval: 1000,
+      replication_poll_interval: args[:poll_interval],
       publication: args[:publication],
       slot_name: args[:slot_name],
       max_record_bytes: 1_048_576

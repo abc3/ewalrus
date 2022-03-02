@@ -19,6 +19,7 @@ defmodule Ewalrus do
         db_name,
         db_user,
         db_pass,
+        poll_interval \\ 500,
         publication \\ "supabase_multiplayer",
         slot_name \\ "supabase_multiplayer_replication_slot"
       ) do
@@ -30,6 +31,7 @@ defmodule Ewalrus do
           db_name: db_name,
           db_user: db_user,
           db_pass: db_pass,
+          poll_interval: poll_interval,
           publication: publication,
           slot_name: slot_name
         ]
